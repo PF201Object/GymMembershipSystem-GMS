@@ -1,48 +1,40 @@
 package Config;
 
 import java.sql.*;
-import java.util.Scanner;
+import java.util.*;
 
 public class config {
-
+    // =======================================================
+    // DATABASE CONNECTION
+    // =======================================================
+    /**
+     * Establishes a connection to the SQLite database file GMS.db.
+     * @return A valid Connection object, or null if connection fails.
+     */
     public static Connection connectDB() {
         Connection con = null;
         try {
+            // Load the SQLite JDBC driver
             Class.forName("org.sqlite.JDBC");
+            // Establish the connection
             con = DriverManager.getConnection("jdbc:sqlite:GMS.db");
-                System.out.println("Connection Successful");
-        } catch (ClassNotFoundException | SQLException e) {
-            System.out.println("Connection Failed: " + e);
+            // System.out.println("Connection Successful"); // Commented out to reduce console clutter
+        } catch (ClassNotFoundException e) {
+            System.out.println("Connection Failed: SQLite JDBC driver not found.");
+        } catch (SQLException e) {
+            System.out.println("Connection Failed: Could not connect to database: " + e.getMessage());
         }
         return con;
     }
 
-
     public void addRecord(String sql, Object... values) {
-        try (Connection conn = config.connectDB(); // Use the connectDB method
+        try (Connection conn = config.connectDB(); 
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            // Loop through the values and set them in the prepared statement dynamically
+            // Loop through values and set them in the prepared statement
             for (int i = 0; i < values.length; i++) {
-                if (values[i] instanceof Integer) {
-                    pstmt.setInt(i + 1, (Integer) values[i]); // If the value is Integer
-                } else if (values[i] instanceof Double) {
-                    pstmt.setDouble(i + 1, (Double) values[i]); // If the value is Double
-                } else if (values[i] instanceof Float) {
-                    pstmt.setFloat(i + 1, (Float) values[i]); // If the value is Float
-                } else if (values[i] instanceof Long) {
-                    pstmt.setLong(i + 1, (Long) values[i]); // If the value is Long
-                } else if (values[i] instanceof Boolean) {
-                    pstmt.setBoolean(i + 1, (Boolean) values[i]); // If the value is Boolean
-                } else if (values[i] instanceof java.util.Date) {
-                    pstmt.setDate(i + 1, new java.sql.Date(((java.util.Date) values[i]).getTime())); // If the value is Date
-                } else if (values[i] instanceof java.sql.Date) {
-                    pstmt.setDate(i + 1, (java.sql.Date) values[i]); // If it's already a SQL Date
-                } else if (values[i] instanceof java.sql.Timestamp) {
-                    pstmt.setTimestamp(i + 1, (java.sql.Timestamp) values[i]); // If the value is Timestamp
-                } else {
-                    pstmt.setString(i + 1, values[i].toString()); // Default to String for other types
-                }
+                // Simplified object setting for flexibility
+                pstmt.setObject(i + 1, values[i]); 
             }
 
             pstmt.executeUpdate();
@@ -52,33 +44,37 @@ public class config {
         }
     }
 
-        public void viewRecords(String sqlQuery, String[] columnHeaders, String[] columnNames) {
-        // Check that columnHeaders and columnNames arrays are the same length
+    // =======================================================
+    // CRUD: SELECT (for viewing tables)
+    // =======================================================
+    /**
+     * Executes a SELECT query and prints the results using custom column headers.
+     */
+    public void viewRecords(String sqlQuery, String[] columnHeaders, String[] columnNames) {
         if (columnHeaders.length != columnNames.length) {
             System.out.println("Error: Mismatch between column headers and column names.");
             return;
         }
 
         try (Connection conn = config.connectDB();
-             PreparedStatement pstmt = conn.prepareStatement(sqlQuery);
-             ResultSet rs = pstmt.executeQuery()) {
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sqlQuery)) {
 
-            // Print the headers dynamically
+            // Dynamic header printing
             StringBuilder headerLine = new StringBuilder();
             headerLine.append("--------------------------------------------------------------------------------\n| ");
             for (String header : columnHeaders) {
-                headerLine.append(String.format("%-20s | ", header)); // Adjust formatting as needed
+                headerLine.append(String.format("%-20s | ", header));
             }
             headerLine.append("\n--------------------------------------------------------------------------------");
-
             System.out.println(headerLine.toString());
 
-            // Print the rows dynamically based on the provided column names
+            // Dynamic row printing
             while (rs.next()) {
                 StringBuilder row = new StringBuilder("| ");
                 for (String colName : columnNames) {
                     String value = rs.getString(colName);
-                    row.append(String.format("%-20s | ", value != null ? value : "")); // Adjust formatting
+                    row.append(String.format("%-20s | ", value != null ? value : ""));
                 }
                 System.out.println(row.toString());
             }
@@ -89,63 +85,68 @@ public class config {
         }
     }
 
+    // =======================================================
+    // CRUD: UPDATE
+    // =======================================================
+    /**
+     * Executes an UPDATE query with dynamic parameter binding.
+     */
     public void updateRecord(String sql, Object... values) {
-        try (Connection conn = config.connectDB(); // Use the connectDB method
+        try (Connection conn = config.connectDB(); 
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            // Loop through the values and set them in the prepared statement dynamically
+            // Loop through values and set them in the prepared statement
             for (int i = 0; i < values.length; i++) {
-                if (values[i] instanceof Integer) {
-                    pstmt.setInt(i + 1, (Integer) values[i]); // If the value is Integer
-                } else if (values[i] instanceof Double) {
-                    pstmt.setDouble(i + 1, (Double) values[i]); // If the value is Double
-                } else if (values[i] instanceof Float) {
-                    pstmt.setFloat(i + 1, (Float) values[i]); // If the value is Float
-                } else if (values[i] instanceof Long) {
-                    pstmt.setLong(i + 1, (Long) values[i]); // If the value is Long
-                } else if (values[i] instanceof Boolean) {
-                    pstmt.setBoolean(i + 1, (Boolean) values[i]); // If the value is Boolean
-                } else if (values[i] instanceof java.util.Date) {
-                    pstmt.setDate(i + 1, new java.sql.Date(((java.util.Date) values[i]).getTime())); // If the value is Date
-                } else if (values[i] instanceof java.sql.Date) {
-                    pstmt.setDate(i + 1, (java.sql.Date) values[i]); // If it's already a SQL Date
-                } else if (values[i] instanceof java.sql.Timestamp) {
-                    pstmt.setTimestamp(i + 1, (java.sql.Timestamp) values[i]); // If the value is Timestamp
-                } else {
-                    pstmt.setString(i + 1, values[i].toString()); // Default to String for other types
-                }
+                // Simplified object setting for flexibility
+                pstmt.setObject(i + 1, values[i]);
             }
 
-            pstmt.executeUpdate();
-            System.out.println("Record updated successfully!");
+            int rowsAffected = pstmt.executeUpdate();
+             if (rowsAffected > 0) {
+                 System.out.println("Record updated successfully!");
+             } else {
+                 System.out.println("No records were updated. Check the ID.");
+             }
         } catch (SQLException e) {
             System.out.println("Error updating record: " + e.getMessage());
         }
     }
 
+    // =======================================================
+    // CRUD: DELETE
+    // =======================================================
+    /**
+     * Executes a DELETE query with dynamic parameter binding.
+     */
     public void deleteRecord(String sql, Object... values) {
         try (Connection conn = config.connectDB();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            // Loop through the values and set them in the prepared statement dynamically
+            // Loop through values and set them in the prepared statement
             for (int i = 0; i < values.length; i++) {
-                if (values[i] instanceof Integer) {
-                    pstmt.setInt(i + 1, (Integer) values[i]); // If the value is Integer
-                } else {
-                    pstmt.setString(i + 1, values[i].toString()); // Default to String for other types
-                }
+                pstmt.setObject(i + 1, values[i]);
             }
 
-            pstmt.executeUpdate();
-            System.out.println("Record deleted successfully!");
+            int rowsAffected = pstmt.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("Record deleted successfully!");
+            } else {
+                System.out.println("No record found with that ID.");
+            }
         } catch (SQLException e) {
             System.out.println("Error deleting record: " + e.getMessage());
         }
     }
 
-
-    public java.util.List<java.util.Map<String, Object>> fetchRecords(String sqlQuery, Object... values) {
-        java.util.List<java.util.Map<String, Object>> records = new java.util.ArrayList<>();
+    // =======================================================
+    // CRUD: SELECT (for fetching data to process, e.g., login)
+    // =======================================================
+    /**
+     * Executes a SELECT query and returns the results as a list of maps.
+     * Used internally by other classes (like main.java) for login checks.
+     */
+    public List<Map<String, Object>> fetchRecords(String sqlQuery, Object... values) {
+        List<Map<String, Object>> records = new ArrayList<>();
 
         try (Connection conn = config.connectDB();
              PreparedStatement pstmt = conn.prepareStatement(sqlQuery)) {
@@ -159,7 +160,7 @@ public class config {
             int columnCount = metaData.getColumnCount();
 
             while (rs.next()) {
-                java.util.Map<String, Object> row = new java.util.HashMap<>();
+                Map<String, Object> row = new HashMap<>();
                 for (int i = 1; i <= columnCount; i++) {
                     row.put(metaData.getColumnName(i), rs.getObject(i));
                 }
@@ -173,39 +174,12 @@ public class config {
         return records;
     }
     
-        public void loginUser() {
-        Scanner sc = new Scanner(System.in);
-        config con = new config(); // An instance of the class to call fetchRecords
-
-        System.out.print("Enter Email: ");
-        String email = sc.next();
-        System.out.print("Enter Password: ");
-        String pass = sc.next();
-
-        String hashedPassword = hashPassword(pass); // Use the static hashing method
-
-        String sql = "SELECT * FROM tbl_user WHERE u_email = ? AND u_pass = ?";
-
-        // FIX: Replaced 'var' with explicit List<Map<String, Object>>
-        java.util.List<java.util.Map<String, Object>> result = con.fetchRecords(sql, email, hashedPassword);
-
-        if (!result.isEmpty()) {
-            // FIX: Replaced 'var' with explicit Map<String, Object>
-            java.util.Map<String, Object> user = result.get(0);
-            // Assuming u_email exists in the map for a welcome message
-            System.out.println("Login successful! Welcome, " + user.get("u_email") + ".");
-            System.out.println("User Type: " + user.get("u_type"));
-        } else {
-            System.out.println("Invalid email or password.");
-        }
-        // NOTE: In a real app, you'd close the scanner here, but if
-        // it's a static class/utility, you often leave System.in open.
-    }
-    // -------------------------------------------------------------
-    // -------------------------
-
-    // --- NEW: Hash Password Utility Method ---
-    // Method to hash passwords using SHA-256
+    // =======================================================
+    // PASSWORD UTILITY
+    // =======================================================
+    /**
+     * Hashes passwords using SHA-256 for secure storage.
+     */
     public static String hashPassword(String password) {
         try {
             java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
@@ -220,7 +194,6 @@ public class config {
             }
             return hexString.toString();
         } catch (java.security.NoSuchAlgorithmException e) {
-            // Handle the error if SHA-256 is not available (highly unlikely)
             System.out.println("Error hashing password: " + e.getMessage());
             return null;
         }

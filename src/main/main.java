@@ -6,17 +6,24 @@ import java.util.*;
 public class main {
     static Scanner sc = new Scanner(System.in);
     static config conf = new config();
+    
+    // Static variable to store the role of the currently logged-in user (0=Staff, 1=Admin)
+    private static int current_user_role = -1; 
 
     public static void main(String[] args) {
-        int choice;
+        int choice = -1;
         do {
             System.out.println("\n=== GYM MEMBERSHIP SYSTEM ===");
             System.out.println("[1] Login");
             System.out.println("[2] Register");
             System.out.println("[0] Exit");
             System.out.print("Enter choice: ");
-            choice = sc.nextInt();
-            sc.nextLine(); // consume newline
+            
+            try {
+                choice = Integer.parseInt(sc.nextLine());
+            } catch (NumberFormatException e) {
+                choice = -1; // Forces invalid choice handling
+            }
 
             switch (choice) {
                 case 1:
@@ -52,11 +59,18 @@ public class main {
         if (!userList.isEmpty()) {
             Map<String, Object> user = userList.get(0);
             String name = (String) user.get("Username");
-            int role = (int) user.get("U_Type");
+            // Cast to int, assuming U_Type is stored as a numerical type (0 or 1)
+            int role = ((Number) user.get("U_Type")).intValue();
+            
+            // Store the logged-in user's role
+            current_user_role = role; 
 
             String roleName = (role == 0) ? "Staff" : "Admin";
             System.out.println("\n✅ Welcome, " + name + "! You are logged in as " + roleName + ".");
             showMainMenu();
+            
+            // After the user logs out (showMainMenu returns), reset the role
+            current_user_role = -1;
         } else {
             System.out.println("❌ Invalid credentials. Try again.");
         }
@@ -81,9 +95,19 @@ public class main {
             return;
         }
 
+        int role = -1;
         System.out.print("Enter Role [0 = Staff, 1 = Admin]: ");
-        int role = sc.nextInt();
-        sc.nextLine(); // consume newline
+        try {
+            role = Integer.parseInt(sc.nextLine());
+        } catch (NumberFormatException e) {
+            System.out.println("❌ Invalid role input. Must be 0 or 1.");
+            return;
+        }
+        
+        if (role != 0 && role != 1) {
+            System.out.println("❌ Role must be 0 (Staff) or 1 (Admin).");
+            return;
+        }
 
         String hashed = config.hashPassword(password);
 
@@ -97,33 +121,51 @@ public class main {
     // MAIN MENU AFTER LOGIN
     // ==============================
     public static void showMainMenu() {
-        int choice;
+        int choice = -1;
+        // Dynamic menu options
+        final int membersOption = 1;
+        final int servicesOptionForStaff = 2;
+        final int servicesOptionForAdmin = 3;
+        final int managementOption = 2; // For Admin only
+        final int logoutOption = 0;
+        
         do {
             System.out.println("\n=== MAIN MENU ===");
-            System.out.println("[1] Members");
-            System.out.println("[2] Management");
-            System.out.println("[3] Services");
-            System.out.println("[0] Logout");
-            System.out.print("Enter choice: ");
-            choice = sc.nextInt();
-            sc.nextLine();
+            System.out.println("[" + membersOption + "] Members");
+            
+            int currentServicesOption = servicesOptionForStaff;
 
-            switch (choice) {
-                case 1:
-                    memberMenu();
-                    break;
-                case 2:
-                    managementMenu();
-                    break;
-                case 3:
-                    servicesMenu();
-                    break;
-                case 0:
-                    System.out.println("Logging out...");
-                    break;
-                default:
-                    System.out.println("Invalid choice. Try again.");
+            // Conditional display of Management for Admin (role == 1)
+            if (current_user_role == 1) {
+                System.out.println("[" + managementOption + "] Management");
+                currentServicesOption = servicesOptionForAdmin; // Services moves to [3]
             }
+
+            System.out.println("[" + currentServicesOption + "] Services");
+            System.out.println("[" + logoutOption + "] Logout");
+            System.out.print("Enter choice: ");
+            
+            // Input reading with robust error handling
+            try {
+                choice = Integer.parseInt(sc.nextLine());
+            } catch (NumberFormatException e) {
+                choice = -1; // Forces invalid choice handling
+            }
+
+            if (choice == membersOption) {
+                memberMenu();
+            } else if (current_user_role == 1 && choice == managementOption) {
+                // Admin access to Management
+                managementMenu();
+            } else if (choice == currentServicesOption) {
+                servicesMenu();
+            } else if (choice == logoutOption) {
+                System.out.println("Logging out...");
+                break; // Exit the loop
+            } else {
+                System.out.println("Invalid choice. Try again.");
+            }
+            
         } while (choice != 0);
     }
 
@@ -132,7 +174,7 @@ public class main {
     // ==============================
     public static void memberMenu() {
         Members member = new Members();
-        int choice;
+        int choice = -1;
         do {
             System.out.println("\n=== MEMBER MANAGEMENT ===");
             System.out.println("[1] Add Member");
@@ -141,7 +183,12 @@ public class main {
             System.out.println("[4] Delete Member");
             System.out.println("[0] Back");
             System.out.print("Enter choice: ");
-            choice = Integer.parseInt(sc.nextLine());
+            
+            try {
+                choice = Integer.parseInt(sc.nextLine());
+            } catch (NumberFormatException e) {
+                choice = -1;
+            }
 
             switch (choice) {
                 case 1:
@@ -166,9 +213,10 @@ public class main {
         } while (choice != 0);
     }
     
+    // MANAGEMENT MENU (Only accessible by Admin via showMainMenu logic)
     public static void managementMenu() {
         Management management = new Management();
-        int choice;
+        int choice = -1;
         do {
             System.out.println("\n=== MANAGEMENT OPERATIONS ===");
             System.out.println("[1] Add Record");
@@ -177,7 +225,12 @@ public class main {
             System.out.println("[4] Delete Record");
             System.out.println("[0] Back");
             System.out.print("Enter choice: ");
-            choice = Integer.parseInt(sc.nextLine());
+            
+            try {
+                choice = Integer.parseInt(sc.nextLine());
+            } catch (NumberFormatException e) {
+                choice = -1;
+            }
 
             switch (choice) {
                 case 1:
@@ -203,7 +256,7 @@ public class main {
 
     public static void servicesMenu() {
         Services services = new Services();
-        int choice;
+        int choice = -1;
         do {
             System.out.println("\n=== SERVICES MANAGEMENT ===");
             System.out.println("[1] Add Service");
@@ -212,7 +265,12 @@ public class main {
             System.out.println("[4] Delete Service");
             System.out.println("[0] Back");
             System.out.print("Enter choice: ");
-            choice = Integer.parseInt(sc.nextLine());
+            
+            try {
+                choice = Integer.parseInt(sc.nextLine());
+            } catch (NumberFormatException e) {
+                choice = -1;
+            }
 
             switch (choice) {
                 case 1:

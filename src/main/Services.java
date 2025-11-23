@@ -13,30 +13,44 @@ public class Services {
     // =============================
     public void addService() {
         System.out.println("\n=== ADD NEW SERVICE ===");
+        viewMembers(); // Display members list for ID reference
 
+        // Get Member ID (M_ID) and validate
         int memberId;
         while (true) {
             System.out.print("Enter Member ID: ");
-            memberId = Integer.parseInt(sc.nextLine());
-
-            // 🔍 Validate if Member exists
-            if (checkMemberExists(memberId)) {
+            try {
+                memberId = Integer.parseInt(sc.nextLine());
+            } catch (NumberFormatException e) {
+                System.out.println("❌ Invalid ID format. Please enter a number.");
+                continue;
+            }
+            if (checkMemberExists(memberId)) { // Uses Members table validation
                 break;
             } else {
-                System.out.println("❌ Member ID " + memberId + " does not exist. Please try again.");
+                System.out.println("❌ Member ID " + memberId + " does not exist in the Members table. Please try again.");
             }
         }
 
         System.out.print("Enter Service Name (e.g., Personal Training, Zumba, Sauna): ");
         String serviceName = sc.nextLine();
 
-        System.out.print("Enter Service Type (Monthly / Per Session / Premium): ");
+        System.out.print("Enter Service Type (Monthly / Per Session): ");
         String serviceType = sc.nextLine();
-
+        
+        System.out.println("Monthly: 1050");
+        System.out.println("Session: 250");
         System.out.print("Enter Amount: ");
-        double amount = Double.parseDouble(sc.nextLine());
-
-        System.out.print("Enter Staff Assigned (leave blank if none): ");
+        double amount;
+        try {
+            amount = Double.parseDouble(sc.nextLine());
+        } catch (NumberFormatException e) {
+            System.out.println("❌ Invalid amount format. Setting amount to 0.0.");
+            amount = 0.0;
+        }
+        System.out.println("\nTrainers");
+        System.out.println("1.Josh\n2.Ronbell\n3.Sarah");
+        System.out.print("Enter Staff Assigned (N/A if none): ");
         String staff = sc.nextLine();
 
         String paymentStatus = "Pending";
@@ -76,7 +90,7 @@ public class Services {
     }
 
     // =============================
-    // READ
+    // READ ALL SERVICES
     // =============================
     public void viewServices() {
         System.out.println("\n=== SERVICE RECORDS ===");
@@ -87,7 +101,7 @@ public class Services {
              ResultSet rs = stmt.executeQuery(sql)) {
 
             System.out.printf("%-5s %-8s %-25s %-15s %-12s %-10s %-20s%n",
-                    "ID", "M_ID", "Service Name", "Type", "Payment", "Amount", "Staff Assigned");
+                        "ID", "M_ID", "Service Name", "Type", "Payment", "Amount", "Staff Assigned");
             System.out.println("----------------------------------------------------------------------------------------");
 
             while (rs.next()) {
@@ -100,17 +114,59 @@ public class Services {
                         rs.getDouble("Amount"),
                         rs.getString("Staff_Assigned"));
             }
+            System.out.println("----------------------------------------------------------------------------------------");
         } catch (SQLException e) {
             System.out.println("❌ Error viewing services: " + e.getMessage());
         }
     }
 
     // =============================
+    // READ MEMBERS (FOR ID REFERENCE)
+    // =============================
+    private void viewMembers() {
+        System.out.println("\n--- Existing Member IDs ---");
+        // FIX: Using 'Name' as confirmed by the schema screenshot
+        String sql = "SELECT M_ID, Name FROM Members ORDER BY M_ID ASC"; 
+
+        try (Connection conn = config.connectDB();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            // Check if there are any members
+            if (!rs.isBeforeFirst()) {
+                System.out.println("No members found.");
+                return;
+            }
+            
+            System.out.printf("%-8s %-30s%n", "M_ID", "Member Name"); 
+            System.out.println("--------------------------------------");
+
+            while (rs.next()) {
+                System.out.printf("%-8d %-30s%n",
+                        rs.getInt("M_ID"),
+                        // FIX: Retrieving data using 'Name'
+                        rs.getString("Name")); 
+            }
+            System.out.println("--------------------------------------");
+        } catch (SQLException e) {
+            System.out.println("❌ Error viewing members for reference: " + e.getMessage());
+        }
+    }
+
+
+    // =============================
     // UPDATE
     // =============================
     public void updateService() {
         System.out.print("\nEnter Service ID to Update: ");
-        int id = Integer.parseInt(sc.nextLine());
+        int id;
+        try {
+            id = Integer.parseInt(sc.nextLine());
+        } catch (NumberFormatException e) {
+            System.out.println("❌ Invalid ID format.");
+            return;
+        }
+
         System.out.print("Enter New Payment Status (Paid / Unpaid / Pending): ");
         String status = sc.nextLine();
         System.out.print("Enter New Staff Assigned (leave blank to skip): ");
@@ -137,7 +193,13 @@ public class Services {
     // =============================
     public void deleteService() {
         System.out.print("\nEnter Service ID to Delete: ");
-        int id = Integer.parseInt(sc.nextLine());
+        int id;
+        try {
+            id = Integer.parseInt(sc.nextLine());
+        } catch (NumberFormatException e) {
+            System.out.println("❌ Invalid ID format.");
+            return;
+        }
 
         String sql = "DELETE FROM Services WHERE S_ID = ?";
         try (Connection conn = config.connectDB(); PreparedStatement pstmt = conn.prepareStatement(sql)) {

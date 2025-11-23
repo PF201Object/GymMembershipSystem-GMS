@@ -1,122 +1,234 @@
 package main;
 
 import Config.config;
-import java.sql.*;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Scanner;
+import java.util.*;
 
 public class Management {
-    Scanner sc = new Scanner(System.in);
-    config conf = new config();
+    // Shared resources from main.java
+    static Scanner sc = main.sc;
+    static config conf = main.conf;
 
-    // =============================
-    // CREATE
-    // =============================
+    // ==============================
+    // HELPER: DISPLAY AVAILABLE USERS (AS POTENTIAL STAFF IDs)
+    // ==============================
+    /**
+     * Helper method to display all usernames from the Users table for the Admin to choose from.
+     */
+    private void displayAvailableUsernames() {
+        System.out.println("\n--- Available Usernames (Potential Staff IDs) ---");
+        // Fetch all usernames and their roles from the Users table
+        String sql = "SELECT Username, U_Type FROM Users ORDER BY Username";
+        List<Map<String, Object>> userList = conf.fetchRecords(sql);
+
+        if (userList.isEmpty()) {
+            System.out.println("ℹ️ No registered users found.");
+            return;
+        }
+
+        System.out.println("----------------------------------------");
+        System.out.printf("| %-20s | %-10s |\n", "Username (Staff ID)", "Role");
+        System.out.println("----------------------------------------");
+        
+        for (Map<String, Object> user : userList) {
+            String username = (String) user.get("Username");
+            // Assuming U_Type is a number (0 or 1)
+            int role = ((Number) user.get("U_Type")).intValue();
+            String roleName = (role == 0) ? "Staff" : "Admin";
+            System.out.printf("| %-20s | %-10s |\n", username, roleName);
+        }
+        System.out.println("----------------------------------------");
+    }
+
+    // ==============================
+    // HELPER: VIEW STAFF RECORD BY ID (kept for completeness)
+    // ==============================
+    public boolean viewManagementRecordByID(String staffId) {
+        String sql = "SELECT StaffID, Role_Position, DateOfHire, Salary_PayRate, ContactNumber, WorkEmail FROM Management WHERE StaffID = ?";
+        List<Map<String, Object>> staffList = conf.fetchRecords(sql, staffId);
+
+        if (staffList.isEmpty()) {
+            System.out.println("❌ Staff ID " + staffId + " not found in Management records.");
+            return false;
+        }
+        
+        System.out.println("-----------------------------------------------------------------------------------------------------------------------------------");
+        System.out.printf("| %-10s | %-20s | %-15s | %-15s | %-15s | %-30s |\n", 
+                             "Staff ID", "Role/Position", "Date of Hire", "Salary/PayRate", "Contact Number", "Work Email");
+        System.out.println("-----------------------------------------------------------------------------------------------------------------------------------");
+
+        for (Map<String, Object> staff : staffList) {
+            System.out.printf("| %-10s | %-20s | %-15s | %-15s | %-15s | %-30s |\n",
+                staff.get("StaffID"),
+                staff.get("Role_Position"),
+                staff.get("DateOfHire"),
+                staff.get("Salary_PayRate"),
+                staff.get("ContactNumber"),
+                staff.get("WorkEmail"));
+        }
+        System.out.println("-----------------------------------------------------------------------------------------------------------------------------------");
+        return true;
+    }
+    
+    // ==============================
+    // ADD STAFF RECORD
+    // ==============================
     public void addManagementRecord() {
-        System.out.println("\n=== ADD MANAGEMENT RECORD ===");
-        System.out.print("Enter User ID (Staff/Admin): ");
-        int userId = Integer.parseInt(sc.nextLine());
-        System.out.print("Enter Activity Type (Registration / Update / Cancellation): ");
-        String activity = sc.nextLine();
-        System.out.print("Enter Action Details: ");
-        String details = sc.nextLine();
-        System.out.print("Enter Remarks: ");
-        String remarks = sc.nextLine();
-        String status = "Pending";
+        System.out.println("\n=== ADD NEW STAFF RECORD ===");
+        
+        // 1. Display list of potential Staff IDs (Usernames)
+        displayAvailableUsernames(); 
+        
+        // 2. Prompt for Staff ID
+        System.out.print("Enter Staff ID: ");
+        String staffId = sc.nextLine();
+        
+        // Check 1: Check if Staff ID already has a Management record
+        String checkMgmtSql = "SELECT * FROM Management WHERE StaffID = ?";
+        List<Map<String, Object>> existingRecord = conf.fetchRecords(checkMgmtSql, staffId);
 
-        String date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
-
-        String sql = "INSERT INTO Management (U_ID, Activity_Type, Action_Details, Action_Date, Remarks, Status) VALUES (?, ?, ?, ?, ?, ?)";
-
-        try (Connection conn = config.connectDB(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, userId);
-            pstmt.setString(2, activity);
-            pstmt.setString(3, details);
-            pstmt.setString(4, date);
-            pstmt.setString(5, remarks);
-            pstmt.setString(6, status);
-            pstmt.executeUpdate();
-            System.out.println("✅ Management record added successfully!");
-        } catch (SQLException e) {
-            System.out.println("❌ Error adding management record: " + e.getMessage());
+        if (!existingRecord.isEmpty()) {
+            System.out.println("❌ Error: Staff ID " + staffId + " already has a Management record.");
+            // Show the existing record
+            viewManagementRecordByID(staffId);
+            return;
         }
-    }
+        
+        // Check 2: Check if the Staff ID exists in the Users table (CORRECTED QUERY)
+        // This ensures a management record is only created for a registered user.
+        String checkUserSql = "SELECT * FROM Users WHERE Username = ?"; 
+        List<Map<String, Object>> existingUser = conf.fetchRecords(checkUserSql, staffId);
+        
+        if (existingUser.isEmpty()) {
+            System.out.println("❌ Error: Staff ID " + staffId + " does not match any registered user in the system.");
+            return;
+        }
+        
+        System.out.println("\nFront Desk Staff / Member Services Associate");
+        System.out.println("Gym Attendant / Entry-Level Staff");
+        System.out.print("Enter Role/Position: ");
+        String role = sc.nextLine();
+        System.out.print("Enter DateOfHire (YYYY-MM-DD): ");
+        String dateOfHire = sc.nextLine();
+        System.out.println("\nFront Desk Staff / Member Services Associate");
+        System.out.println("*₱16,000 – ₱20,000 per month");
+        System.out.println("Gym Attendant / Entry-Level Staff");
+        System.out.println("*₱12,000 – ₱15,000 per month");
+        System.out.print("Enter Salary/PayRate: ");
+        String salary = sc.nextLine();
+        System.out.print("Enter ContactNumber: ");
+        String contactNumber = sc.nextLine();
+        System.out.print("Enter WorkEmail: ");
+        String workEmail = sc.nextLine();
 
-    // =============================
-    // READ
-    // =============================
+        String sql = "INSERT INTO Management (StaffID, Role_Position, DateOfHire, Salary_PayRate, ContactNumber, WorkEmail) VALUES (?, ?, ?, ?, ?, ?)";
+        conf.addRecord(sql, staffId, role, dateOfHire, salary, contactNumber, workEmail);
+
+        System.out.println("✅ Staff record for ID " + staffId + " added successfully.");
+    }
+    
+    // ==============================
+    // VIEW STAFF RECORDS (ALL)
+    // ==============================
     public void viewManagementRecords() {
-        System.out.println("\n=== MANAGEMENT RECORDS ===");
-        String sql = "SELECT * FROM Management ORDER BY Action_Date DESC";
+        System.out.println("\n=== VIEW ALL STAFF RECORDS ===");
+        String sql = "SELECT * FROM Management";
+        List<Map<String, Object>> staffList = conf.fetchRecords(sql);
 
-        try (Connection conn = config.connectDB();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
-            System.out.printf("%-5s %-8s %-20s %-30s %-20s %-25s %-15s%n",
-                    "ID", "U_ID", "Activity", "Details", "Date", "Remarks", "Status");
-            System.out.println("-------------------------------------------------------------------------------------------------------------");
-
-            while (rs.next()) {
-                System.out.printf("%-5d %-8d %-20s %-30s %-20s %-25s %-15s%n",
-                        rs.getInt("MG_ID"),
-                        rs.getInt("U_ID"),
-                        rs.getString("Activity_Type"),
-                        rs.getString("Action_Details"),
-                        rs.getString("Action_Date"),
-                        rs.getString("Remarks"),
-                        rs.getString("Status"));
-            }
-        } catch (SQLException e) {
-            System.out.println("❌ Error viewing management records: " + e.getMessage());
+        if (staffList.isEmpty()) {
+            System.out.println("ℹ️ No staff records found.");
+            return;
         }
-    }
 
-    // =============================
-    // UPDATE
-    // =============================
+        System.out.println("-----------------------------------------------------------------------------------------------------------------------------------");
+        System.out.printf("| %-10s | %-20s | %-15s | %-15s | %-15s | %-30s |\n",
+                             "Staff ID", "Role/Position", "Date of Hire", "Salary/PayRate", "Contact Number", "Work Email");
+        System.out.println("-----------------------------------------------------------------------------------------------------------------------------------");
+
+        for (Map<String, Object> staff : staffList) {
+            System.out.printf("| %-10s | %-20s | %-15s | %-15s | %-15s | %-30s |\n",
+                staff.get("StaffID"),
+                staff.get("Role_Position"),
+                staff.get("DateOfHire"),
+                staff.get("Salary_PayRate"),
+                staff.get("ContactNumber"),
+                staff.get("WorkEmail"));
+        }
+        System.out.println("-----------------------------------------------------------------------------------------------------------------------------------");
+    }
+    
+    // ==============================
+    // UPDATE STAFF RECORD
+    // ==============================
     public void updateManagementRecord() {
-        System.out.print("\nEnter Management Record ID to Update: ");
-        int id = Integer.parseInt(sc.nextLine());
-        System.out.print("Enter New Remarks: ");
-        String remarks = sc.nextLine();
-        System.out.print("Enter New Status (Completed / Pending / Cancelled): ");
-        String status = sc.nextLine();
+        System.out.println("\n=== UPDATE STAFF RECORD ===");
+        System.out.print("Enter Staff ID to update: ");
+        String staffId = sc.nextLine();
 
-        String sql = "UPDATE Management SET Remarks = ?, Status = ? WHERE MG_ID = ?";
-        try (Connection conn = config.connectDB(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, remarks);
-            pstmt.setString(2, status);
-            pstmt.setInt(3, id);
-            int rows = pstmt.executeUpdate();
+        // Check if Staff ID exists
+        String checkSql = "SELECT * FROM Management WHERE StaffID = ?";
+        List<Map<String, Object>> existingRecord = conf.fetchRecords(checkSql, staffId);
 
-            if (rows > 0)
-                System.out.println("✅ Management record updated successfully!");
-            else
-                System.out.println("⚠️ Record not found!");
-        } catch (SQLException e) {
-            System.out.println("❌ Error updating record: " + e.getMessage());
+        if (existingRecord.isEmpty()) {
+            System.out.println("❌ Staff ID " + staffId + " not found. Cannot update.");
+            return;
         }
+        
+        System.out.println("Enter new details (leave blank to keep current value):");
+        
+        System.out.print("Enter new Role/Position: ");
+        String newRole = sc.nextLine();
+        
+        System.out.print("Enter new DateOfHire (YYYY-MM-DD): ");
+        String newDateOfHire = sc.nextLine();
+        
+        System.out.print("Enter new Salary/PayRate: ");
+        String newSalary = sc.nextLine();
+        
+        System.out.print("Enter new ContactNumber: ");
+        String newContactNumber = sc.nextLine();
+        
+        System.out.print("Enter new WorkEmail: ");
+        String newWorkEmail = sc.nextLine();
+
+        // Use the existing values if the new input is blank
+        Map<String, Object> current = existingRecord.get(0);
+        String role = newRole.isEmpty() ? (String)current.get("Role_Position") : newRole;
+        String dateOfHire = newDateOfHire.isEmpty() ? (String)current.get("DateOfHire") : newDateOfHire;
+        String salary = newSalary.isEmpty() ? (String)current.get("Salary_PayRate") : newSalary;
+        String contactNumber = newContactNumber.isEmpty() ? (String)current.get("ContactNumber") : newContactNumber;
+        String workEmail = newWorkEmail.isEmpty() ? (String)current.get("WorkEmail") : newWorkEmail;
+
+        String sql = "UPDATE Management SET Role_Position = ?, DateOfHire = ?, Salary_PayRate = ?, ContactNumber = ?, WorkEmail = ? WHERE StaffID = ?";
+        conf.updateRecord(sql, role, dateOfHire, salary, contactNumber, workEmail, staffId);
+
+        System.out.println("✅ Staff record for ID " + staffId + " updated successfully.");
     }
-
-    // =============================
-    // DELETE
-    // =============================
+    // ==============================
+    // DELETE STAFF RECORD
+    // ==============================
     public void deleteManagementRecord() {
-        System.out.print("\nEnter Management Record ID to Delete: ");
-        int id = Integer.parseInt(sc.nextLine());
+        System.out.println("\n=== DELETE STAFF RECORD ===");
+        System.out.print("Enter Staff ID to delete: ");
+        String staffId = sc.nextLine();
 
-        String sql = "DELETE FROM Management WHERE MG_ID = ?";
-        try (Connection conn = config.connectDB(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, id);
-            int rows = pstmt.executeUpdate();
-            if (rows > 0)
-                System.out.println("🗑️ Record deleted successfully!");
-            else
-                System.out.println("⚠️ Record not found!");
-        } catch (SQLException e) {
-            System.out.println("❌ Error deleting record: " + e.getMessage());
+        // Check if Staff ID exists
+        String checkSql = "SELECT * FROM Management WHERE StaffID = ?";
+        List<Map<String, Object>> existingRecord = conf.fetchRecords(checkSql, staffId);
+
+        if (existingRecord.isEmpty()) {
+            System.out.println("❌ Staff ID " + staffId + " not found. Cannot delete.");
+            return;
+        }
+        
+        System.out.print("⚠️ Are you sure you want to delete staff record for ID " + staffId + "? (yes/no): ");
+        String confirmation = sc.nextLine().toLowerCase();
+
+        if (confirmation.equals("yes")) {
+            String sql = "DELETE FROM Management WHERE StaffID = ?";
+            conf.deleteRecord(sql, staffId);
+            System.out.println("✅ Staff record for ID " + staffId + " deleted successfully.");
+        } else {
+            System.out.println("Deletion cancelled.");
         }
     }
 }

@@ -23,7 +23,14 @@ public class Members {
         String email = sc.nextLine();
         System.out.print("Address: ");
         String address = sc.nextLine();
-        System.out.print("Member Type (Customer / Staff / Trainer): ");
+        System.out.println("\n--Prices of Gym Membership--\n");
+        System.out.println("*Access Basic Packages");
+        System.out.println("Bronze:  300P");
+        System.out.println("*Access Mid Tier Packages");
+        System.out.println("Gold:    500P");
+        System.out.println("*Access All Packages");
+        System.out.println("Diamond: 850P\n");
+        System.out.print("\nMembership Type (Bronze / Gold / Diamond): ");
         String uType = sc.nextLine();
         String joinDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
         String status = "Active";
@@ -56,7 +63,7 @@ public class Members {
 
             System.out.printf("%-5s %-20s %-10s %-15s %-25s %-25s %-15s %-15s %-15s\n",
                     "ID", "Name", "Gender", "Contact", "Email", "Address", "Type", "Join_Date", "Status");
-            System.out.println("---------------------------------------------------------------------------------------------------------------------------");
+            System.out.println("----------------------------------------------------------------------------------------------------------------------------------------------------");
 
             while (rs.next()) {
                 System.out.printf("%-5d %-20s %-10s %-15s %-25s %-25s %-15s %-15s %-15s\n",
